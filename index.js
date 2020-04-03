@@ -8,7 +8,7 @@ const Router = express.Router();
 const http = require("http");
 
 // Listen for API version 1 requests
-application.use("/api/v1", require("./api/v1.js"));
+application.use("/api/v1", require("./api/v1/index.js"));
 
 application.use("/", (req, res) => {
     res.status(200).send("The API can be accessed at /api/v1.");
