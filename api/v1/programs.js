@@ -1,6 +1,5 @@
 const Router = require("express").Router();
 const Mongo = require("../../lib/mongo.js");
-const ObjectId = require("mongodb").ObjectId;
 module.exports = Router;
 
 Router.get("/all", async (req, res) => {
