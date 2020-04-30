@@ -3,7 +3,7 @@ const Mongo = require("../../lib/mongo.js");
 module.exports = Router;
 
 Router.get("/:semester_id/filter", async (req, res) => {
-    let page = 1;
+    let page = 0;
     if(req.query.page) {
         page = req.query.page;
         delete req.query.page;

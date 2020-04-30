@@ -1,0 +1,735 @@
+swagger: "2.0"
+info:
+  description: "This API allows access to a University of Virginia class schedule database. It contains all classes currently or previously taught at the University, and also provides methods for fuzzy searching of courses based on keywords. Furthermore, access to the grade distribution for all graded courses (sourced via FOIA requests) from previous semesters is also available through this API."
+  version: "1.0.0"
+  title: "UVA DevHub Courses API"
+  termsOfService: "http://devhub.virginia.edu/"
+  contact:
+    email: "devhub@virginia.edu"
+  license:
+    name: "Apache 2.0"
+    url: "http://www.apache.org/licenses/LICENSE-2.0.html"
+host: "localhost:8000"
+basePath: "/api/v1"
+
+tags:
+- name: "Courses"
+  description: "View, search, and filter through all courses taught at the University, past and present, based on criteria."
+- name: "Grades"
+  description: "Access the grade distribution information on past courses at the University."
+- name: "Programs"
+  description: "Contains data on the different majors, minors, certificates, and other degree or program related items."
+- name: "Subjects"
+  description: ""
+- name: "Terms"
+  description: "Get information about the different available semesters or terms."
+schemes:
+- "https"
+paths:
+  /courses/{semester_id}/filter:
+    get:
+      tags:
+      - "Courses"
+      summary: "Filter courses from a given semester"
+      description: "Any field from the Course schema, described in the bottom section, can be filtered here. Each of the parameters listed is optional; any combination is accepted. If invalid fields are specified as querystring parameters, the search will return no results."
+      produces:
+      - "application/json"
+      parameters:
+      - in: "path"
+        name: "semester_id"
+        type: "string"
+        description: "4 digit semester ID number."
+        required: true
+      - in: "query"
+        name: "page"
+        type: "integer"
+        description: "Defaults to the first page (0). Specifies which page of results you want to view; indexing begins at 0."
+        required: false
+      - in: "query"
+        name: "per_page"
+        type: "integer"
+        description: "Defaults to 25. Dictates how many results should be included per page. Speed of the request dramatically decreases as page size increases."
+        required: false
+      - in: "query"
+        name: "sis_id"
+        type: "string"
+        description: "SIS ID of the course you wish to have returned."
+        required: false
+      - in: "query"
+        name: "catalog_number"
+        type: "string"
+        description: "Limit results to only courses with this catalog number."
+        required: false
+      - in: "query"
+        name: "subject"
+        type: "string"
+        description: "Limit results to only courses from this subject department, such as ENWR."
+        required: false
+      - in: "query"
+        name: "common_name"
+        type: "string"
+        description: "Limit results to only courses of this subject/catalog number combination, such as ASTR1210."
+        required: false
+      - in: "query"
+        name: "status"
+        type: "string"
+        description: "Limit results to courses which are either 'Open', 'Closed', or 'Waitlist'."
+        required: false
+      - in: "query"
+        name: "type"
+        type: "string"
+        description: "Limit results to courses of a certain type, such as 'Lecture', 'Seminar', or 'Discussion'."
+        required: false
+      responses:
+        200:
+          description: "OK"
+          schema:
+            $ref: "#/components/schemas/CourseFilterResults"
+  /courses/{semester_id}/fuzzy:
+    get:
+      tags:
+      - "Courses"
+      summary: "Find courses closest to a given query string."
+      description: "Input a single query and a fuzzy search is used to find the courses which most closely match the query."
+      produces:
+      - "application/json"
+      parameters:
+      - in: "path"
+        name: "semester_id"
+        description: "Limit search to a certain semester"
+        required: true
+        type: "string"
+      - in: "query"
+        name: "q"
+        description: "The query string to find courses similar to"
+        required: true
+        type: "string"
+      responses:
+        200:
+          description: "OK"
+          schema:
+            $ref: "#/components/schemas/CourseFuzzyResults"
+  
+  /grades/semester/{semester_id}/professor/{professor_name}/course/{common_name}:
+    get:
+      tags:
+      - "Grades"
+      description: "Grades from a specific course, from a given semester, taught by a given professor."
+      parameters:
+      - in: "path"
+        name: "semester_id"
+        description: "Semester to pull grades from"
+        required: true
+        type: "string"
+      - in: "path"
+        name: "professor_name"
+        description: "Fuzzy term for a professor's name, or your best attempt at their name. When possible, results are limited to a single professor, so being as specific as possible is important here."
+        required: true
+        type: "string"
+      - in: "path"
+        name: "common_name"
+        description: "The common name of the course you wish to see grades from, like CS2110."
+        required: true
+        type: "string"
+      responses:
+        200:
+          description: "OK"
+          schema:
+            $ref: "#/components/schemas/GradeFuzzyResult"
+  /grades/semester/{semester_id}/professor/{professor_name}:
+    get:
+      tags:
+      - "Grades"
+      summary: "All of a professor's grades from a certain semester"
+      description: "Grades for all courses a given professor taught in a certain semester."
+      parameters:
+      - in: "path"
+        name: "semester_id"
+        description: "Semester to pull grades from"
+        required: true
+        type: "string"
+      - in: "path"
+        name: "professor_name"
+        description: "Fuzzy term for a professor's name, or your best attempt at their name. When possible, results are limited to a single professor, so being as specific as possible is important here."
+        required: true
+        type: "string"
+      responses:
+        200:
+          description: "OK"
+          schema:
+            $ref: "#/components/schemas/GradeFuzzyResult"
+  /grades/semester/{semester_id}/course/{common_name}:
+    get:
+      tags:
+      - "Grades"
+      summary: "All grades in a course from a certain semester"
+      description: "Grades for specific course and semester regardless of which professor taught them."
+      parameters:
+      - in: "path"
+        name: "semester_id"
+        description: "Semester to pull grades from"
+        required: true
+        type: "string"
+      - in: "path"
+        name: "common_name"
+        description: "The common name of the course you wish to see grades from, like CS2110."
+        required: true
+        type: "string"
+      responses:
+        200:
+          description: "OK"
+          schema:
+            $ref: "#/components/schemas/GradeStandardResult"
+  /grades/semester/{semester_id}:
+    get:
+      tags:
+      - "Grades"
+      summary: "All grades from a given semester."
+      description: "Grades all courses and all professors from a given semester."
+      parameters:
+      - in: "path"
+        name: "semester_id"
+        description: "Semester to pull grades from"
+        required: true
+        type: "string"
+      responses:
+        200:
+          description: "OK"
+          schema:
+            $ref: "#/components/schemas/GradeStandardResult"
+  
+  /grades/professor/{professor_name}/course/{common_name}:
+    get:
+      tags:
+      - "Grades"
+      summary: "All grades from course when taught by a certain professor"
+      description: "All grades for a specific course when taught by a specific professor, across all available semesters."
+      parameters:
+      - in: "path"
+        name: "professor_name"
+        description: "Fuzzy term for a professor's name, or your best attempt at their name. When possible, results are limited to a single professor, so being as specific as possible is important here."
+        required: true
+        type: "string"
+      - in: "path"
+        name: "common_name"
+        description: "The common name of the course you wish to see grades from, like CS2110."
+        required: true
+        type: "string"
+      responses:
+        200:
+          description: "OK"
+          schema:
+            $ref: "#/components/schemas/GradeFuzzyResult"
+  /grades/professor/{professor_name}:
+    get:
+      tags:
+      - "Grades"
+      summary: "All grades from any course taught by a certain professor"
+      description: "Includes grades from all courses, across all semesters, which were taught by a given professor."
+      parameters:
+      - in: "path"
+        name: "professor_name"
+        description: "Fuzzy term for a professor's name, or your best attempt at their name. When possible, results are limited to a single professor, so being as specific as possible is important here."
+        required: true
+        type: "string"
+      responses:
+        200:
+          description: "OK"
+          schema:
+            $ref: "#/components/schemas/GradeStandardResult"
+  /grades/course/{common_name}:
+    get:
+      tags:
+      - "Grades"
+      summary: "All grades for a certain course, ever"
+      description: "Grades for a certain course, across all semesters and professors who taught them."
+      parameters:
+      - in: "path"
+        name: "common_name"
+        description: "The common name of the course you wish to see grades from, like CS2110."
+        required: true
+        type: "string"
+      responses:
+        200:
+          description: "OK"
+          schema:
+            $ref: "#/components/schemas/GradeStandardResult"
+          
+  /programs/all:
+    get:
+      tags:
+      - "Programs"
+      summary: "Retrieve all available programs"
+      description: "Retrieves the full list of programs the database has available. Programs come separated based on type."
+      responses:
+        200:
+          description: "OK"
+          schema:
+            $ref: "#/components/schemas/ProgramResults"
+  /programs/filter:
+    get:
+      tags:
+      - "Programs"
+      summary: "Get programs matching some criteria"
+      description: "Filter our programs which match satisfy some specific criteria, such as their school. Any property of the Program type can be used here, although school and type are likely the most useful to filter by."
+      parameters:
+      - in: "query"
+        name: "school"
+        description: "Limit results to programs belonging to this school."
+        type: "string"
+        required: false
+      - in: "query"
+        name: "type"
+        description: "Limit results to programs of this type."
+        type: "string"
+        required: false
+      responses:
+        200:
+          description: "OK"
+          schema:
+            $ref: "#/components/schemas/ProgramResults"
+  /programs/fuzzy:
+    get:
+      tags:
+      - "Programs"
+      summary: "Find programs closest to a given query string"
+      description: "Input a single query and a fuzzy search is used to find the programs which most closely match the query."
+      produces:
+      - "application/json"
+      parameters:
+      - in: "query"
+        name: "q"
+        description: "The query string to find courses similar to"
+        required: true
+        type: "string"
+      responses:
+        200:
+          description: "OK"
+          schema:
+            $ref: "#/components/schemas/ProgramFuzzyResults"
+  /programs/{program_id}:
+    get:
+      tags:
+      - "Programs"
+      summary: "Find a program by its ObjectId or name"
+      description: "Retrieve a single program using its unique ObjectId. Will automatically detect if a name, such as Chemistry, is provided and will display the appropriate result(s)."
+      produces:
+      - "application/json"
+      parameters:
+      - in: "path"
+        name: "program_id"
+        description: "ObjectId of the desired program."
+        required: true
+        type: "string"
+      responses:
+        200:
+          description: "OK"
+          schema:
+            $ref: "#/components/schemas/ProgramNameOrId"
+        400:
+          description: "The provided ObjectId was invalid. ObjectIds must be a valid 24 character hex value."
+          schema:
+            $ref: "#/components/schemas/ProgramNameOrId"
+  
+  /subjects/all:
+    get:
+      tags:
+      - "Subjects"
+      summary: "Retrieve the list of all subjects"
+      description: "Retrieves a list of all subjects available in the database."
+      produces:
+      - "application/json"
+      responses:
+        200:
+          description: "OK"
+          schema:
+            $ref: "#/components/schemas/SubjectResults"
+  /subjects/filter:
+    get:
+      tags:
+      - "Subjects"
+      summary: "Filter subjects based on given criteria"
+      description: "As with the other filtering API routes, any Subject property may be used here as a query string to constrain the filter's results. Any combination is also acceptable."
+      produces:
+      - "application/json"
+      parameters:
+      - in: "query"
+        name: "subject"
+        description: "Limit results to a subject with a given abbreviation, i.e. CHEM."
+        required: false
+        type: "string"
+      - in: "query"
+        name: "name"
+        description: "Limit results to a subject with a given friendly name, i.e. Commerce."
+        required: false
+        type: "string"
+      - in: "query"
+        name: "school"
+        description: "Limit results to subjects taught within a given school, i.e. SEAS."
+        required: false
+        type: "string"
+      responses:
+        200:
+          description: "OK"
+          schema:
+            $ref: "#/components/schemas/SubjectResults"
+  /subjects/fuzzy:
+    get:
+      tags:
+      - "Subjects"
+      summary: "Find subjects closest to a given query string"
+      description: "Input a single query and a fuzzy search is used to find the subjects which most closely match the query."
+      produces:
+      - "application/json"
+      parameters:
+      - in: "query"
+        name: "q"
+        description: "The query string to find courses similar to"
+        required: true
+        type: "string"
+      responses:
+        200:
+          description: "OK"
+          schema:
+            $ref: "#/components/schemas/SubjectResults"
+  
+  /terms/all:
+    get:
+      tags:
+      - "Terms"
+      summary: "Retrieve all available terms"
+      description: "Retrieve the list of terms which have records in the database."
+      produces:
+      - "application/json"
+      responses:
+        200:
+          description: "OK"
+          schema:
+            $ref: "#/components/schemas/TermResults"
+  /terms/current:
+    get:
+      tags:
+      - "Terms"
+      summary: "Retrieve whichever term is most current"
+      description: "Returns the term corresponding to the future-most term in the database."
+      produces:
+      - "application/json"
+      responses:
+        200:
+          description: "OK"
+          schema:
+            type: "object"
+            properties:
+              current:
+                $ref: "#/definitions/Term"
+
+definitions:
+  Course:
+    type: "object"
+    properties:
+      _id:
+        type: "string"
+        format: "ObjectId"
+      sis_id:
+        type: "string"
+        description: "Unique 5 digit numerical ID of the course in SIS."
+      subject:
+        type: "integer"
+      catalog_number:
+        type: "string"
+        description: "4 digit numerical catalog number, such as 2150 in CS 2150."
+      common_name:
+        type: "string"
+        description: "Joins subject and catalog number for easy course searching. I.e. CHEM1410"
+      section:
+        type: "string"
+      type:
+        type: "string"
+        enum:
+        - "Seminar"
+        - "Independent Study"
+        - "Lecture"
+        - "Discussion"
+      credits:
+        type: "string"
+        description: "Number or range of credits offered through the course."
+      title:
+        type: "string"
+      topic:
+        type: "string"
+      desc:
+        type: "string"
+      status:
+        type: "string"
+        enum:
+        - "Open"
+        - "Closed"
+        - "Waitlist"
+      enroll_limit:
+        type: "integer"
+        format: "int64"
+      enrolled:
+        type: "integer"
+        format: "int64"
+      waiting:
+        type: "integer"
+        format: "int64"
+  Grade:
+    type: "object"
+    properties:
+      _id:
+        type: "string"
+        format: "ObjectId"
+      level:
+        type: "string"
+        enum:
+        - "GRAD"
+        - "UGRD"
+      semester_id:
+        $ref: "#/definitions/SemesterId"
+      course_subject:
+        type: "string"
+      catalog_number:
+        type: "string"
+      common_name:
+        type: "string"
+      section:
+        type: "string"
+      has_instructor:
+        type: "boolean"
+        description: "If true, computing_id, first_name, and last_name fields are populated. Otherwise, they are all the empty string."
+      computing_id:
+        type: "string"
+      first_name:
+        type: "string"
+      last_name:
+        type: "string"
+      students:
+        type: "integer"
+        format: "int32"
+      section_gpa:
+        type: "number"
+        format: "double"
+      grade_a_plus:
+        type: "integer"
+        format: "int32"
+      grade_a:
+        type: "integer"
+        format: "int32"
+      grade_a_minus:
+        type: "integer"
+        format: "int32"
+      grade_b_plus:
+        type: "integer"
+        format: "int32"
+      grade_b:
+        type: "integer"
+        format: "int32"
+      grade_b_minus:
+        type: "integer"
+        format: "int32"
+      grade_c_plus:
+        type: "integer"
+        format: "int32"
+      grade_c:
+        type: "integer"
+        format: "int32"
+      grade_c_minus:
+        type: "integer"
+        format: "int32"
+      grade_d:
+        type: "integer"
+        format: "int32"
+      grade_f:
+        type: "integer"
+        format: "int32"
+      grade_dfw:
+        type: "integer"
+        format: "int32"
+        description: "DWF can include students who failed, dropped, or withdrew from the course. Some courses do not provide grade distribution below C-. In these cases, DFW includes students who passed with a D."
+  Program:
+    type: "object"
+    properties:
+      _id:
+        type: "string"
+        format: "ObjectId"
+      name:
+        type: "string"
+      school:
+        $ref: "#/definitions/School"
+      type:
+        $ref: "#/definitions/ProgramType"
+      desc:
+        type: "string"
+        description: "Description of the program, if one was available. If no description was given, this is set to 'Not Provided'"
+      link:
+        type: "string"
+        description: "Hyperlink to the University Registrar's page which describes the program."
+  Subject:
+    type: "object"
+    properties:
+      _id:
+        type: "string"
+        format: "ObjectId"
+      subject:
+        type: "string"
+        description: "Abbreviation used for the subject, like PHYS for Physics courses."
+      name:
+        type: "string"
+        description: "Friendly name of the subject, i.e. Accounting."
+      school:
+        $ref: "#/definitions/School"
+  Term:
+    type: "object"
+    properties:
+      _id:
+        $ref: "#/definitions/SemesterId"
+      name:
+        type: "string"
+        description: "Full semester name, such as Fall 2014 Semester."
+      friendly:
+        type: "string"
+        description: "Friendlier semester name; i.e. Fall 2014."
+      short:
+        type: "string"
+        description: "Abbreviated semester name, i.e. as F16, J12, or Su19."
+  School:
+    type: "string"
+    description: "All schools at the University have an abbreviation. This API uses the following abbreviations, which reference the following schools (respectively): School of Engineering and Applied Sciences; College of Arts and Sciences; School of Architecture; School of Continuing and Professional Studies; McIntire School of Commerce; Curry School of Education; Batten School of Leadership and Public Policy; Nursing School; Reserve Officers' Training Corps."
+    enum:
+    - "SEAS"
+    - "CLAS"
+    - "ARCH"
+    - "SCPS"
+    - "COMM"
+    - "CURRY"
+    - "BATTEN"
+    - "NURS"
+    - "ROTC"
+  ProgramType:
+    type: "string"
+    description: "All programs have an academic designation, such as major or minor, which describes what the program is."
+    enum:
+    - "major"
+    - "minor"
+    - "certificate"
+    - "academic"
+  SemesterId:
+    type: "string"
+    description: "4 digit numerical id of the term. First digit is always 1. 2nd and 3rd are the last two digits of the year. Last digit corresponds which month the term began in."
+
+components:
+  schemas:
+    CourseResult:
+      type: "object"
+      properties:
+        item:
+          $ref: "#/definitions/Course"
+        refIndex:
+          type: "integer"
+          description: "Consider the original list of items which the search was performed on. This indicates this item's original index in that initial list."
+        score:
+          type: "number"
+          description: "Double value between 0.0 and 1.0 which describes how similar the result was to the query. 0.0 indicates a flawless match."
+    GradeResult:
+      type: "object"
+      properties:
+        item:
+          $ref: "#/definitions/Grade"
+        refIndex:
+          type: "integer"
+          description: "Consider the original list of items which the search was performed on. This indicates this item's original index in that initial list."
+    CourseFilterResults:
+      type: "object"
+      properties:
+        pages:
+          type: "integer"
+          description: "Describes how many pages of results are available from the given query and specified results per page."
+        results:
+          type: "array"
+          items:
+            $ref: "#/definitions/Course"
+    CourseFuzzyResults:
+      type: "object"
+      properties:
+        count:
+          type: "integer"
+          description: "The number of courses which were flagged as relevant to the query."
+        results:
+          type: "array"
+          items:
+            $ref: "#/components/schemas/CourseResult"
+    GradeFuzzyResult:
+      type: "object"
+      properties:
+        single_instructor_guaranteed:
+          type: "boolean"
+          description: "If true, the API guarantees that all courses returned belong to the same instructor. This can be false depending on the type of grade query issued, or if courses involved did not have a primary instructor listed."
+        count:
+          type: "integer"
+          description: "The number of results which were found."
+        results:
+          type: "array"
+          items:
+            $ref: "#/components/schemas/GradeResult"
+    GradeStandardResult:
+      type: "object"
+      properties:
+        single_instructor_guaranteed:
+          type: "boolean"
+          description: "If true, the API guarantees that all courses returned belong to the same instructor. This can be false depending on the type of grade query issued, or if courses involved did not have a primary instructor listed."
+        count:
+          type: "integer"
+          description: "The number of results which were found."
+        results:
+          type: "array"
+          items:
+            $ref: "#/definitions/Grade"
+    ProgramResults:
+      type: "object"
+      properties:
+        results:
+          type: "array"
+          items:
+            $ref: "#/definitions/Program"
+    ProgramFuzzyResults:
+      type: "object"
+      properties:
+        count:
+          type: "integer"
+        results:
+          type: "array"
+          items:
+            type: "object"
+            properties:
+              item:
+                $ref: "#/definitions/Program"
+              refIndex:
+                type: "integer"
+              score:
+                type: "number"
+    ProgramNameOrId:
+      type: "object"
+      properties:
+        status:
+          type: "integer"
+        matches:
+          type: "array"
+          items:
+            $ref: "#/definitions/Program"
+    SubjectResults:
+      type: "object"
+      properties:
+        count:
+          type: "integer"
+        results:
+          type: "array"
+          items:
+            $ref: "#/definitions/Subject"
+    TermResults:
+      type: "object"
+      properties:
+        terms:
+          type: "array"
+          items:
+            $ref: "#/definitions/Term"
